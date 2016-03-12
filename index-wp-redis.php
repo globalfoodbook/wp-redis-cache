@@ -19,12 +19,12 @@ function requestHasSecret($secret) {
 function isRemotePageLoad($currentUrl, $websiteIp) {
     return (isset($_SERVER['HTTP_REFERER'])
             && $_SERVER['HTTP_REFERER']== $currentUrl
-            && $_SERVER['REQUEST_URI'] != '/' 
+            && $_SERVER['REQUEST_URI'] != '/'
             && $_SERVER['REMOTE_ADDR'] != $websiteIp);
 }
 
 function handleCDNRemoteAddressing() {
-    // so we don't confuse the cloudflare server 
+    // so we don't confuse the cloudflare server
     if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
         $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_CF_CONNECTING_IP'];
     }
@@ -40,11 +40,11 @@ function getCleanUrl($secret) {
 $wp_blog_header_path = dirname( __FILE__ ) . '/wp-blog-header.php';
 $debug          = true;
 $cache          = true;
-$websiteIp      = '127.0.0.1';
+$websiteIp      = '${WP_HOST_IP}';
 // if you use sockets, set this to true and use $redis_server for socket path
 $sockets        = false;
 // in case of sockets something like /home/user/.redis/sock
-$redis_server   = '127.0.0.1';
+$redis_server   = '${REDIS_PORT_6379_TCP_ADDR}';
 $secret_string  = 'changeme';
 $current_url    = getCleanUrl($secret_string);
 // used to prefix ssl cached pages
@@ -67,7 +67,7 @@ try {
 
         // Sockets can be used as well. Documentation @ https://github.com/nicolasff/phpredis/#connection
         $redis->connect($redis_server);
-        
+
     } else { // Fallback to predis5.2.php
 
         if ($debug) {
@@ -91,7 +91,7 @@ try {
             die("Error occurred. Error message: " . $e->getMessage());
         }
     }
-    
+
     //Either manual refresh cache by adding ?refresh=secret_string after the URL or somebody posting a comment
     if (refreshHasSecret($secret_string) || requestHasSecret($secret_string) || isRemotePageLoad($current_url, $websiteIp)) {
         if ($debug) {
@@ -100,7 +100,7 @@ try {
         $redis->del($redis_key);
         $redis->del("ssl_".$redis_key);
         require( $wp_blog_header_path );
-        
+
         $unlimited = get_option('wp-redis-cache-debug',false);
         $seconds_cache_redis = get_option('wp-redis-cache-seconds',43200);
     // This page is cached, lets display it
@@ -117,9 +117,9 @@ try {
         if ($debug) {
             echo "<!-- displaying page without cache -->\n";
         }
-        
+
         $isPOST = ($_SERVER['REQUEST_METHOD'] === 'POST') ? 1 : 0;
-        
+
         $loggedIn = preg_match("/wordpress_logged_in/", var_export($_COOKIE, true));
         if (!$isPOST && !$loggedIn) {
             ob_start();
@@ -146,7 +146,7 @@ try {
         } else { //either the user is logged in, or is posting a comment, show them uncached
             require( $wp_blog_header_path );
         }
-        
+
     } else if ($_SERVER['REMOTE_ADDR'] != $websiteIp && strstr($current_url, 'preview=true') == true) {
         require( $wp_blog_header_path );
     }
